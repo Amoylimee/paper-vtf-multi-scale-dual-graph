@@ -57,6 +57,21 @@ plt.rcParams["font.family"] = "Times New Roman"
 GRID_PATH = os.path.join("output", "p2_grid_ais", "ais_grids.geojson")
 
 # ====================================================================
+# Color Scale Configuration for Grid Density
+# ====================================================================
+# 调整这些参数来控制颜色映射
+# 数据分布：中位数=2，95%分位数=34，99%分位数=252，最大值=28180
+
+# 选项1：使用分位数截断（推荐）
+USE_PERCENTILE_CLIPPING = True
+VMIN_PERCENTILE = int(os.getenv('VMIN_PERCENTILE', 0))    # 从环境变量读取，默认0
+VMAX_PERCENTILE = int(os.getenv('VMAX_PERCENTILE', 95))   # 从环境变量读取，默认95
+
+# 选项2：手动设置范围（如果 USE_PERCENTILE_CLIPPING = False）
+MANUAL_VMIN = 1
+MANUAL_VMAX = 100
+
+# ====================================================================
 # Configuration: Geographic Extents (WGS84 lon/lat)
 # ====================================================================
 
@@ -313,20 +328,22 @@ ax = plt.axes(projection=mapbox.crs)
 ax.set_extent(main_extent, crs=proj)
 ax.add_image(mapbox, 9)  # zoom level 9，可以根据需要调整 (8-11)
 
-# 叠加 p2 网格（按归一化密度着色）
+# 叠加 p2 网格（使用分位数截断处理长尾分布）
 grid_patches, grid_values = load_grid_patches(GRID_PATH)
 if len(grid_patches) > 0:
-    # 归一化到 0-1 之间 (min-max normalization)
-    # 只对正值进行归一化
-    positive_vals = grid_values[grid_values > 0]
-    if len(positive_vals) == 0:
-        positive_vals = np.array([1])
+    # 根据配置确定颜色范围
+    if USE_PERCENTILE_CLIPPING:
+        if VMIN_PERCENTILE > 0:
+            vmin = np.percentile(grid_values, VMIN_PERCENTILE)
+        else:
+            vmin = grid_values.min()
+        vmax = np.percentile(grid_values, VMAX_PERCENTILE)
+        print(f"Using percentile clipping: vmin={vmin:.1f} ({VMIN_PERCENTILE}%), vmax={vmax:.1f} ({VMAX_PERCENTILE}%)")
+    else:
+        vmin = MANUAL_VMIN
+        vmax = MANUAL_VMAX
+        print(f"Using manual range: vmin={vmin}, vmax={vmax}")
     
-    # 归一化：将所有值映射到 0-1 区间
-    normalized_values = np.zeros_like(grid_values)
-    if grid_values.max() > 0:
-        normalized_values = (grid_values - grid_values.min()) / (grid_values.max() - grid_values.min())
-
     grid_collection = PatchCollection(
         grid_patches,
         cmap="viridis",
@@ -335,9 +352,8 @@ if len(grid_patches) > 0:
         edgecolor="none",
     )
     grid_collection.set_transform(proj)
-    grid_collection.set_array(normalized_values)  # 使用归一化值
-    # 使用线性 normalization，范围 0-1
-    grid_collection.set_clim(0, 1)
+    grid_collection.set_array(grid_values)  # 使用原始值
+    grid_collection.set_clim(vmin, vmax)
     ax.add_collection(grid_collection)
 
     # colorbar 嵌入到主图右侧，默认尺寸与位置可按需要微调
@@ -351,11 +367,7 @@ if len(grid_patches) > 0:
         borderpad=0,
     )
     cbar = plt.colorbar(grid_collection, cax=cax, orientation="vertical", extend="both")
-    cbar.set_label("Normalized density", fontsize=10)
-    # 设置 colorbar 刻度为 0 和 1，标签为 Low 和 High
-    cbar.set_ticks([0, 1])
-    cbar.set_ticklabels(['Low', 'High'], ha='left')
-    # 调整刻度标签位置，使其更紧凑
+    cbar.set_label("AIS points density (points/km²)", fontsize=10)
     cbar.ax.yaxis.set_tick_params(pad=2)
 
 # 研究区矩形
@@ -552,5 +564,5 @@ def add_north_arrow_large(ax, x=0.88, y=0.15):
 
 add_north_arrow_large(inset_ax, x=0.88, y=0.8)  # 增大 y 值向上移动
 
-plt.show()
-# plt.savefig('study_area_map.png', bbox_inches='tight')
+# plt.show()
+plt.savefig(f'./output/p3_plot/study_area_map_{VMIN_PERCENTILE}_{VMAX_PERCENTILE}.png', bbox_inches='tight')
