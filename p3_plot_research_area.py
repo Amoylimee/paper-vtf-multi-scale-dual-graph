@@ -20,14 +20,21 @@ from cartopy.io.img_tiles import MapboxTiles
 from shapely.geometry import Polygon
 import matplotlib.patches as mpatches
 from matplotlib.patches import FancyArrowPatch
+from matplotlib.collections import PatchCollection
+from matplotlib.colors import LogNorm
+from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 import numpy as np
 import os
+import json
 from dotenv import load_dotenv
 
 # 加载 .env 文件
 load_dotenv()
 
 plt.rcParams["font.family"] = "Times New Roman"
+
+# Path to p2 grid output
+GRID_PATH = os.path.join("output", "p2_grid_ais", "ais_grids.geojson")
 
 # ====================================================================
 # Configuration: Geographic Extents (WGS84 lon/lat)
@@ -238,6 +245,26 @@ def add_north_arrow(ax, x=0.95, y=0.12, arrow_length=0.05, width=3):
     )
 
 
+def load_grid_patches(grid_path):
+    """Load grid polygons and point counts from GeoJSON into matplotlib patches."""
+    if not os.path.exists(grid_path):
+        return [], np.array([])
+
+    with open(grid_path, "r", encoding="utf-8") as f:
+        geo = json.load(f)
+
+    patches, values = [], []
+    for feat in geo.get("features", []):
+        coords = feat.get("geometry", {}).get("coordinates", [])
+        if not coords:
+            continue
+        # coordinates are [[[lon, lat], ...]]
+        patches.append(mpatches.Polygon(coords[0], closed=True))
+        values.append(feat.get("properties", {}).get("point_count", 0))
+
+    return patches, np.array(values, dtype=float)
+
+
 # -----------------------
 # 4) 画图
 # -----------------------
@@ -258,6 +285,39 @@ ax = plt.axes(projection=mapbox.crs)
 # 底图要素
 ax.set_extent(main_extent, crs=proj)
 ax.add_image(mapbox, 9)  # zoom level 9，可以根据需要调整 (8-11)
+
+# 叠加 p2 网格（按 point_count 着色）
+grid_patches, grid_values = load_grid_patches(GRID_PATH)
+if len(grid_patches) > 0:
+    positive_vals = grid_values[grid_values > 0]
+    if len(positive_vals) == 0:
+        positive_vals = np.array([1])
+
+    grid_collection = PatchCollection(
+        grid_patches,
+        cmap="viridis",
+        alpha=0.5,
+        linewidths=0.3,
+        edgecolor="none",
+    )
+    grid_collection.set_transform(proj)
+    grid_collection.set_array(grid_values)
+    norm = LogNorm(vmin=positive_vals.min(), vmax=grid_values.max())
+    grid_collection.set_norm(norm)
+    ax.add_collection(grid_collection)
+
+    # colorbar 嵌入到主图右侧，默认尺寸与位置可按需要微调
+    cax = inset_axes(
+        ax,
+        width="2.8%",
+        height="32%",
+        loc="lower left",
+        bbox_to_anchor=(1.03, 0.12, 1, 1),  # (x0, y0, w, h) in axes fraction
+        bbox_transform=ax.transAxes,
+        borderpad=0,
+    )
+    cbar = plt.colorbar(grid_collection, cax=cax, orientation="vertical", extend="both")
+    cbar.set_label("AIS point count")
 
 # 研究区矩形
 ax.add_geometries(
