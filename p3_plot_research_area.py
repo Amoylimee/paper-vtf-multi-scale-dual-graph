@@ -246,7 +246,11 @@ def add_north_arrow(ax, x=0.95, y=0.12, arrow_length=0.05, width=3):
 
 
 def load_grid_patches(grid_path):
-    """Load grid polygons and point counts from GeoJSON into matplotlib patches."""
+    """Load grid polygons and compute density from GeoJSON.
+    
+    Returns patches and density values (points per km²).
+    Each grid cell is 1km x 1km = 1 km².
+    """
     if not os.path.exists(grid_path):
         return [], np.array([])
 
@@ -260,7 +264,10 @@ def load_grid_patches(grid_path):
             continue
         # coordinates are [[[lon, lat], ...]]
         patches.append(mpatches.Polygon(coords[0], closed=True))
-        values.append(feat.get("properties", {}).get("point_count", 0))
+        point_count = feat.get("properties", {}).get("point_count", 0)
+        # Grid resolution is 1000m = 1km, so area = 1 km²
+        # Density = point_count / 1 km² = point_count
+        values.append(point_count)  # Already density since grid is 1 km²
 
     return patches, np.array(values, dtype=float)
 
@@ -286,12 +293,19 @@ ax = plt.axes(projection=mapbox.crs)
 ax.set_extent(main_extent, crs=proj)
 ax.add_image(mapbox, 9)  # zoom level 9，可以根据需要调整 (8-11)
 
-# 叠加 p2 网格（按 point_count 着色）
+# 叠加 p2 网格（按归一化密度着色）
 grid_patches, grid_values = load_grid_patches(GRID_PATH)
 if len(grid_patches) > 0:
+    # 归一化到 0-1 之间 (min-max normalization)
+    # 只对正值进行归一化
     positive_vals = grid_values[grid_values > 0]
     if len(positive_vals) == 0:
         positive_vals = np.array([1])
+    
+    # 归一化：将所有值映射到 0-1 区间
+    normalized_values = np.zeros_like(grid_values)
+    if grid_values.max() > 0:
+        normalized_values = (grid_values - grid_values.min()) / (grid_values.max() - grid_values.min())
 
     grid_collection = PatchCollection(
         grid_patches,
@@ -301,23 +315,28 @@ if len(grid_patches) > 0:
         edgecolor="none",
     )
     grid_collection.set_transform(proj)
-    grid_collection.set_array(grid_values)
-    norm = LogNorm(vmin=positive_vals.min(), vmax=grid_values.max())
-    grid_collection.set_norm(norm)
+    grid_collection.set_array(normalized_values)  # 使用归一化值
+    # 使用线性 normalization，范围 0-1
+    grid_collection.set_clim(0, 1)
     ax.add_collection(grid_collection)
 
     # colorbar 嵌入到主图右侧，默认尺寸与位置可按需要微调
     cax = inset_axes(
         ax,
         width="2.8%",
-        height="32%",
+        height="50%",
         loc="lower left",
-        bbox_to_anchor=(1.03, 0.12, 1, 1),  # (x0, y0, w, h) in axes fraction
+        bbox_to_anchor=(1.03, 0.12, 1, 1),
         bbox_transform=ax.transAxes,
         borderpad=0,
     )
     cbar = plt.colorbar(grid_collection, cax=cax, orientation="vertical", extend="both")
-    cbar.set_label("AIS point count")
+    cbar.set_label("Normalized density", fontsize=10)
+    # 设置 colorbar 刻度为 0 和 1，标签为 Low 和 High
+    cbar.set_ticks([0, 1])
+    cbar.set_ticklabels(['Low', 'High'], ha='left')
+    # 调整刻度标签位置，使其更紧凑
+    cbar.ax.yaxis.set_tick_params(pad=2)
 
 # 研究区矩形
 ax.add_geometries(
@@ -343,25 +362,27 @@ ax.add_geometries(
 
 # 标注文字
 ax.text(
-    study_lon_min + 0.05,
-    study_lat_max - 0.08,
-    "Study Area near Zhoushan Port \n(Zhejiang, China)",
+    study_lon_min + 0.03,
+    study_lat_max - 0.05,
+    "Zhoushan",
     transform=proj,
-    fontsize=10,
+    fontsize=14,
     color="crimson",
     ha="left",
     va="top",
+    fontweight="bold",
 )
 
 ax.text(
     sh_lon_min + 0.03,
     sh_lat_max - 0.05,
-    "Study Area near Shanghai Port \n(Shanghai, China)",
+    "Shanghai",
     transform=proj,
-    fontsize=10,
+    fontsize=14,
     color="navy",
     ha="left",
     va="top",
+    fontweight="bold",
 )
 
 # 经纬网
@@ -379,8 +400,8 @@ add_scalebar(ax, length_km=50, location=(0.7, 0.07))
 # -----------------------
 # 5) 插图（区域定位）
 # -----------------------
-# 放大插图尺寸：从 0.27x0.27 改为 0.30x0.30
-inset_ax = fig.add_axes([0.66, 0.66, 0.30, 0.30], projection=mapbox.crs)
+# 放大插图尺寸：从 0.27x0.27 改为 0.35x0.35
+inset_ax = fig.add_axes([0.63, 0.63, 0.35, 0.35], projection=mapbox.crs)
 # 缩小显示范围以更清晰地显示研究区域
 inset_extent_zoomed = [119.5, 125.0, 28.0, 33.0]
 inset_ax.set_extent(inset_extent_zoomed, crs=proj)
@@ -427,29 +448,17 @@ inset_ax.add_geometries(
     zorder=12,
 )
 
-# 插图说明
-inset_ax.text(
-    119.7,
-    32.5,
-    "Main map extent",
-    transform=proj,
-    fontsize=8,
-    color="black",
-    ha="left",
-    va="top",
-    bbox=dict(boxstyle="round,pad=0.3", facecolor="white", edgecolor="none", alpha=0.8),
-)
-inset_ax.text(
-    119.7,
-    31.8,
-    "Study areas",
-    transform=proj,
-    fontsize=8,
-    color="black",
-    ha="left",
-    va="top",
-    bbox=dict(boxstyle="round,pad=0.3", facecolor="white", edgecolor="none", alpha=0.8),
-)
+# 添加图例
+legend_elements = [
+    mpatches.Rectangle((0, 0), 1, 1, facecolor='none', edgecolor='black', 
+                       linewidth=2.0, linestyle='-', label='Main map extent'),
+    mpatches.Rectangle((0, 0), 1, 1, facecolor='crimson', edgecolor='crimson', 
+                       linewidth=1.5, linestyle='--', alpha=0.3, label='Zhoushan area'),
+    mpatches.Rectangle((0, 0), 1, 1, facecolor='navy', edgecolor='navy', 
+                       linewidth=1.5, linestyle='-', alpha=0.3, label='Shanghai area'),
+]
+inset_ax.legend(handles=legend_elements, loc='lower left', fontsize=7, 
+                framealpha=0.9, edgecolor='gray', fancybox=True)
 
 
 # 指北针（添加到插图中，放大尺寸）
