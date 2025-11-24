@@ -70,7 +70,7 @@ def main(file_in: Path, output_dir: Path, log_dir: Path) -> None:
 
     with sb.PrintRedirector(log_dir / f"{file_in.stem}.log"):
         print(f"Processing {file_in}")
-        df = pd.read_feather(file_in)
+        df = pd.read_feather(file_in, columns = ["AIS_new", "UTC", "lon", "lat", "speed"])
         print("Input data shape:", df.shape)
 
         # Study area extent: Zhoushan and Shanghai ports
@@ -90,11 +90,17 @@ def main(file_in: Path, output_dir: Path, log_dir: Path) -> None:
         ]
         print("After extent filter shape:", df.shape)
 
-        # Subsample: randomly keep one point per 2-hour window for each trajectory
-        df = subsample_by_timegap(
-            df=df, id_col="AIS_new", time_col="UTC", timegap_hours=2
-        )
-        print("After sparsify shape:", df.shape)
+        # Keep only December 2021 data
+        df["UTC"] = pd.to_datetime(df["UTC"])
+        df = df[df["UTC"].dt.month == 12]
+        print("After date filter shape:", df.shape)
+
+        # ===== No need to subsample for now ===== #
+        # # Subsample: randomly keep one point per 2-hour window for each trajectory
+        # df = subsample_by_timegap(
+        #     df=df, id_col="AIS_new", time_col="UTC", timegap_hours=2
+        # )
+        # print("After sparsify shape:", df.shape)
 
         if not df.empty:
             output_file = output_dir / f"{file_in.stem}.feather"
