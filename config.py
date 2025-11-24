@@ -24,8 +24,8 @@ LOGS_DIR = PROJECT_ROOT / "logs"
 MAIN_EXTENT = [
     121.30,  # lon_min
     123.65,  # lon_max
-    29.50,   # lat_min
-    31.50,   # lat_max
+    29.50,  # lat_min
+    31.50,  # lat_max
 ]
 
 # Zhoushan study area

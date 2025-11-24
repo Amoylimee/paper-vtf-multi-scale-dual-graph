@@ -13,6 +13,7 @@ import sinbue as sb
 import iogenius as iog
 import pandas as pd
 import numpy as np
+from helpers import set_working_directory
 
 
 def subsample_by_timegap(
@@ -57,7 +58,7 @@ def subsample_by_timegap(
 
 def main(file_in: Path, output_dir: Path, log_dir: Path) -> None:
     """Process a single AIS data file.
-    
+
     Args:
         file_in: Input feather file path
         output_dir: Output directory path
@@ -71,7 +72,7 @@ def main(file_in: Path, output_dir: Path, log_dir: Path) -> None:
         print(f"Processing {file_in}")
         df = pd.read_feather(file_in)
         print("Input data shape:", df.shape)
-        
+
         # Study area extent: Zhoushan and Shanghai ports
         main_extent = [
             121.30,
@@ -79,7 +80,7 @@ def main(file_in: Path, output_dir: Path, log_dir: Path) -> None:
             29.50,
             31.50,  # lat_min, lat_max
         ]
-        
+
         # Filter data within study extent
         df = df[
             (df["lon"] >= main_extent[0])
@@ -107,7 +108,7 @@ if __name__ == "__main__":
     pd.set_option("display.max_rows", 100)
 
     # Set working directory
-    iog.set_working_directory("/disk/r102/jchenhl/papers/paper_traffic_flow")
+    set_working_directory()
 
     # Create output directories
     output_dir = Path("./output/p1_data")
