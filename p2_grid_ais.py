@@ -77,12 +77,6 @@ def main() -> None:
     )
     print(f"Loaded data shape: {df.shape}")
 
-    # Keep only data of December if 'UTC' column exists
-    if "UTC" in df.columns:
-        df["UTC"] = pd.to_datetime(df["UTC"])
-        df = df[df["UTC"].dt.month == 12]
-        print(f"After filtering December data shape: {df.shape}")
-
     # Grid the AIS data
     print("\nGridding AIS data...")
     df_gridded, grids = grid_ais_data(
