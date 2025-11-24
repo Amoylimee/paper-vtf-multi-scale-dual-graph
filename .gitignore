@@ -23,6 +23,7 @@ MANIFEST
 
 # Others
 .ruff_cache/
+fonts/
 
 # Virtual environments
 .env

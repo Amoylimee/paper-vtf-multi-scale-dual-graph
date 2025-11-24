@@ -14,6 +14,7 @@ Date: 2025-11-24
 """
 
 import matplotlib.pyplot as plt
+import matplotlib.font_manager as fm
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 from cartopy.io.img_tiles import MapboxTiles
@@ -31,6 +32,25 @@ from dotenv import load_dotenv
 # 加载 .env 文件
 load_dotenv()
 
+# 配置 Times New Roman 字体
+# 先检查系统是否有该字体，如果没有则从 fonts/ 文件夹加载
+font_available = any('Times New Roman' in f.name for f in fm.fontManager.ttflist)
+if not font_available:
+    # 系统中找不到，尝试从 fonts/ 文件夹加载
+    font_dir = "fonts"
+    if os.path.exists(font_dir):
+        for font_file in os.listdir(font_dir):
+            if font_file.lower().endswith(('.ttf', '.otf')):
+                font_path = os.path.join(font_dir, font_file)
+                fm.fontManager.addfont(font_path)
+                print(f"Loaded font from: {font_path}")
+    # 重新检查是否加载成功
+    font_available = any('Times New Roman' in f.name for f in fm.fontManager.ttflist)
+    if font_available:
+        print("Times New Roman font loaded successfully from fonts/ directory")
+    else:
+        print("Warning: Times New Roman font not found. Using default serif font.")
+        
 plt.rcParams["font.family"] = "Times New Roman"
 
 # Path to p2 grid output
