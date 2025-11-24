@@ -82,7 +82,7 @@ def main() -> None:
     df_gridded, grids = grid_ais_data(
         df=df,
         boundary=MAIN_EXTENT,
-        resolution=1000,  # 1 km resolution
+        resolution=100, 
         mode="count"
     )
 
