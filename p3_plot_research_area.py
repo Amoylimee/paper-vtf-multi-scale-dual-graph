@@ -367,7 +367,10 @@ if len(grid_patches) > 0:
         borderpad=0,
     )
     cbar = plt.colorbar(grid_collection, cax=cax, orientation="vertical", extend="both")
-    cbar.set_label("AIS points density (points/km²)", fontsize=10)
+    cbar.set_label("Traffic Density", fontsize=10, fontweight='bold')
+    # 隐藏数字刻度，只显示 Low 和 High 标签
+    cbar.set_ticks([vmin, vmax])
+    cbar.set_ticklabels(['Low', 'High'], fontsize=9)
     cbar.ax.yaxis.set_tick_params(pad=2)
 
 # 研究区矩形

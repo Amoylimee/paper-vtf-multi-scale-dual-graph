@@ -1,6 +1,5 @@
 #!/bin/bash
 # 批量测试不同分位数截断方案
-# 用法: bash bash/test_percentiles.sh
 
 echo "========================================="
 echo "Testing different percentile clipping schemes"
@@ -14,17 +13,17 @@ mkdir -p output/p3_plot
 # 格式: "vmin vmax 描述"
 test_cases=(
     "0 85 VeryConservative-85th"
-    "0 90 Conservative-90th"
-    "0 92 Standard-92nd"
-    "0 95 Standard-95th"
-    "0 97 Aggressive-97th"
-    "0 99 VeryAggressive-99th"
-    "5 90 Trimmed-5to90"
-    "5 95 Trimmed-5to95"
-    "5 99 Trimmed-5to99"
-    "10 90 Trimmed-10to90"
-    "10 95 Trimmed-10to95"
-    "10 99 Trimmed-10to99"
+    # "0 90 Conservative-90th"
+    # "0 92 Standard-92nd"
+    # "0 95 Standard-95th"
+    # "0 97 Aggressive-97th"
+    # "0 99 VeryAggressive-99th"
+    # "5 90 Trimmed-5to90"
+    # "5 95 Trimmed-5to95"
+    # "5 99 Trimmed-5to99"
+    # "10 90 Trimmed-10to90"
+    # "10 95 Trimmed-10to95"
+    # "10 99 Trimmed-10to99"
 )
 
 echo "Will test ${#test_cases[@]} configurations:"
