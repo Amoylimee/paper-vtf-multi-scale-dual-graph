@@ -461,7 +461,9 @@ if len(collections) > 0:
     cbar.set_label("Low \u2190     Traffic Density     \u2192 High", fontsize=14, fontweight="bold")
     cbar.set_ticks([])
     cbar.ax.tick_params(length=0)
-    cbar.outline.set_visible(False)
+    cbar.outline.set_visible(True)
+    cbar.outline.set_linewidth(1)
+    cbar.outline.set_edgecolor("black")
     cbar.solids.set_edgecolor("face")
     cbar.solids.set_linewidth(0)
 
@@ -477,5 +479,7 @@ for axis, lbl in zip(panel_axes, ["a", "b", "c"]):
 plt.show()
 
 # 保存（可选）
-fig.savefig(f'./output/p3_plot/combined_three_maps_{VMIN_PERCENTILE}_{VMAX_PERCENTILE}.png', bbox_inches='tight')
-# fig.savefig(f'./output/p3_plot/combined_three_maps_{VMIN_PERCENTILE}_{VMAX_PERCENTILE}.pdf', bbox_inches='tight')
+save_dir = "./output/p4_plot"
+os.makedirs(save_dir, exist_ok=True)
+# fig.savefig(os.path.join(save_dir, f'combined_three_maps_{VMIN_PERCENTILE}_{VMAX_PERCENTILE}.png'), bbox_inches='tight')
+fig.savefig(os.path.join(save_dir, f'combined_three_maps_{VMIN_PERCENTILE}_{VMAX_PERCENTILE}.pdf'), bbox_inches='tight')
