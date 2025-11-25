@@ -45,7 +45,7 @@ GRID_PATHS = {
 
 USE_PERCENTILE_CLIPPING = True
 VMIN_PERCENTILE = int(os.getenv('VMIN_PERCENTILE', 0))
-VMAX_PERCENTILE = int(os.getenv('VMAX_PERCENTILE', 95))
+VMAX_PERCENTILE = int(os.getenv('VMAX_PERCENTILE', 85))
 
 MANUAL_VMIN = 1
 MANUAL_VMAX = 100
@@ -477,5 +477,5 @@ for axis, lbl in zip(panel_axes, ["a", "b", "c"]):
 plt.show()
 
 # 保存（可选）
-# fig.savefig(f'./output/p3_plot/combined_three_maps_{VMIN_PERCENTILE}_{VMAX_PERCENTILE}.png', bbox_inches='tight')
+fig.savefig(f'./output/p3_plot/combined_three_maps_{VMIN_PERCENTILE}_{VMAX_PERCENTILE}.png', bbox_inches='tight')
 # fig.savefig(f'./output/p3_plot/combined_three_maps_{VMIN_PERCENTILE}_{VMAX_PERCENTILE}.pdf', bbox_inches='tight')

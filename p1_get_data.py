@@ -68,11 +68,11 @@ def main(
 
     Args:
         file_in: Input feather file path
-        output_dir: Output directory path
         log_dir: Log directory path
+        context_extent: Geographic extent for coarse filtering
+        area_configs: Dictionary of area configurations
     """
     file_in = Path(file_in)
-    output_dir = Path(output_dir)
     log_dir = Path(log_dir)
 
     with sb.PrintRedirector(log_dir / f"{file_in.stem}.log"):
