@@ -38,7 +38,10 @@ plt.rcParams["font.family"] = "Times New Roman"
 # =========================================================
 # 1) PATHS / COLOR CONFIG (same as yours)
 # =========================================================
-GRID_PATH = os.path.join("output", "p2_grid_ais", "ais_grids.geojson")
+GRID_PATHS = {
+    "b": os.path.join("output", "p2_grid_ais", "ais_grids_zhoushan.geojson"),
+    "c": os.path.join("output", "p2_grid_ais", "ais_grids_shanghai.geojson"),
+}
 
 USE_PERCENTILE_CLIPPING = True
 VMIN_PERCENTILE = int(os.getenv('VMIN_PERCENTILE', 0))
@@ -367,16 +370,23 @@ add_scalebar(ax0, length_km=PANEL_VIEWPORTS["a"]["scalebar_km"], location=(0.7, 
 add_north_arrow(ax0, x=0.95, y=0.92)
 
 # =========================================================
-grid_patches, grid_values = load_grid_patches(GRID_PATH)
+area_grids = {}
+all_values = []
+for key, path in GRID_PATHS.items():
+    patches, values = load_grid_patches(path)
+    area_grids[key] = {"patches": patches, "values": values}
+    if len(values) > 0:
+        all_values.append(values)
 
-if len(grid_patches) > 0:
+if len(all_values) > 0:
+    combined_values = np.concatenate(all_values)
     if USE_PERCENTILE_CLIPPING:
-        vmin = np.percentile(grid_values, VMIN_PERCENTILE) if VMIN_PERCENTILE > 0 else grid_values.min()
-        vmax = np.percentile(grid_values, VMAX_PERCENTILE)
-        print(f"Using percentile clipping: vmin={vmin:.1f} ({VMIN_PERCENTILE}%), vmax={vmax:.1f} ({VMAX_PERCENTILE}%)")
+        vmin = np.percentile(combined_values, VMIN_PERCENTILE) if VMIN_PERCENTILE > 0 else combined_values.min()
+        vmax = np.percentile(combined_values, VMAX_PERCENTILE)
+        print(f"Using percentile clipping (combined): vmin={vmin:.1f} ({VMIN_PERCENTILE}%), vmax={vmax:.1f} ({VMAX_PERCENTILE}%)")
     else:
         vmin, vmax = MANUAL_VMIN, MANUAL_VMAX
-        print(f"Using manual range: vmin={vmin}, vmax={vmax}")
+        print(f"Using manual range (combined): vmin={vmin}, vmax={vmax}")
 else:
     vmin, vmax = None, None
 
@@ -398,7 +408,9 @@ for panel in side_panels:
     ax.add_image(mapbox, PANEL_VIEWPORTS[key]["zoom"])
     ax.set_aspect("auto")  # force map to fill the panel box
 
-    if len(grid_patches) > 0:
+    grid_patches = area_grids.get(key, {}).get("patches", [])
+    grid_values = area_grids.get(key, {}).get("values", np.array([]))
+    if len(grid_patches) > 0 and vmin is not None and vmax is not None:
         grid_collection = PatchCollection(
             grid_patches,
             cmap="viridis",
@@ -449,7 +461,7 @@ if len(collections) > 0:
     cbar.set_label("Low \u2190     Traffic Density     \u2192 High", fontsize=14, fontweight="bold")
     cbar.set_ticks([])
     cbar.ax.tick_params(length=0)
-    cbar.outline.set_visible(True)
+    cbar.outline.set_visible(False)
     cbar.solids.set_edgecolor("face")
     cbar.solids.set_linewidth(0)
 

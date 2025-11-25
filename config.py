@@ -20,28 +20,43 @@ LOGS_DIR = PROJECT_ROOT / "logs"
 # Study Area Configuration
 # ====================================================================
 
-# Main map extent: Zhoushan and Shanghai ports (WGS84)
-MAIN_EXTENT = [
-    121.30,  # lon_min
-    123.65,  # lon_max
-    29.50,  # lat_min
-    31.50,  # lat_max
+# Map extents (WGS84)
+CONTEXT_EXTENT = [117.5, 127.0, 25.5, 34.5]
+
+ZHOUSHAN_EXTENT = [
+    121.3856,  # lon_min (study_lon_min - 0.12)
+    123.7326,  # lon_max (study_lon_max + 0.12)
+    29.2407,   # lat_min (study_lat_min - 0.32)
+    31.4194,   # lat_max (study_lat_max + 0.32)
 ]
 
-# Zhoushan study area
-ZHOUSHAN_EXTENT = {
-    "lon_min": 121.5056,
-    "lon_max": 123.6126,
-    "lat_min": 29.5607,
-    "lat_max": 31.0994,
-}
+SHANGHAI_EXTENT = [
+    121.23,  # lon_min
+    122.07,  # lon_max
+    30.73,   # lat_min
+    31.57,   # lat_max
+]
 
-# Shanghai Port area
-SHANGHAI_EXTENT = {
-    "lon_min": 121.3500,
-    "lon_max": 121.9500,
-    "lat_min": 30.8500,
-    "lat_max": 31.4500,
+# Area configurations (only Zhoushan/Shanghai need trajectories & grids)
+AREAS = {
+    "context": {
+        "extent": CONTEXT_EXTENT,
+        "use_tracks": False,
+    },
+    "zhoushan": {
+        "extent": ZHOUSHAN_EXTENT,
+        "use_tracks": True,
+        "p1_output": OUTPUT_DIR / "p1_data_zhoushan",
+        "grid_output": OUTPUT_DIR / "p2_grid_ais" / "ais_grids_zhoushan.geojson",
+        "grid_resolution": 100,
+    },
+    "shanghai": {
+        "extent": SHANGHAI_EXTENT,
+        "use_tracks": True,
+        "p1_output": OUTPUT_DIR / "p1_data_shanghai",
+        "grid_output": OUTPUT_DIR / "p2_grid_ais" / "ais_grids_shanghai.geojson",
+        "grid_resolution": 100,
+    },
 }
 
 # ====================================================================

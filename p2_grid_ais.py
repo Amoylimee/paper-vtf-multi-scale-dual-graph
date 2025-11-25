@@ -13,7 +13,7 @@ import geopandas as gpd
 import sinbue as sb
 import iogenius as iog
 from helpers import set_working_directory
-from config import MAIN_EXTENT
+from config import AREAS
 
 
 def grid_ais_data(
@@ -56,7 +56,7 @@ def grid_ais_data(
 
 
 def main() -> None:
-    """Main function to grid AIS data."""
+    """Main function to grid AIS data for Zhoushan and Shanghai."""
     # Configure pandas display options
     pd.set_option("display.max_columns", None)
     pd.set_option("display.max_rows", 100)
@@ -64,32 +64,40 @@ def main() -> None:
     # Set working directory
     set_working_directory()
 
-    # Define paths
-    data_dir = Path("output/p1_data")
     output_dir = Path("output/p2_grid_ais")
     iog.create_new_directory(output_dir)
 
-    # Load all processed AIS data
-    print("Loading AIS data...")
-    df = iog.concat_files_in_folder(
-        directory_in=data_dir,
-        format="feather"
-    )
-    print(f"Loaded data shape: {df.shape}")
+    for area_name, cfg in AREAS.items():
+        if not cfg.get("use_tracks", False):
+            continue
+        data_dir = Path(cfg["p1_output"])
+        if not data_dir.exists():
+            print(f"[{area_name}] data directory missing, skip: {data_dir}")
+            continue
 
-    # Grid the AIS data
-    print("\nGridding AIS data...")
-    df_gridded, grids = grid_ais_data(
-        df=df,
-        boundary=MAIN_EXTENT,
-        resolution=100, 
-        mode="count"
-    )
+        print(f"\n[{area_name}] Loading AIS data from {data_dir} ...")
+        df = iog.concat_files_in_folder(
+            directory_in=data_dir,
+            format="feather"
+        )
+        if df.empty:
+            print(f"[{area_name}] No data found, skip.")
+            continue
+        print(f"[{area_name}] Loaded data shape: {df.shape}")
 
-    # Save grids as GeoJSON
-    output_file = output_dir / "ais_grids.geojson"
-    grids.to_file(output_file, driver="GeoJSON")
-    print(f"\nSaved grid data to: {output_file}")
+        print(f"[{area_name}] Gridding AIS data...")
+        _, grids = grid_ais_data(
+            df=df,
+            boundary=cfg["extent"],
+            resolution=cfg.get("grid_resolution", 100),
+            mode="count"
+        )
+
+        # Save grids as GeoJSON
+        output_file = Path(cfg["grid_output"])
+        output_file.parent.mkdir(parents=True, exist_ok=True)
+        grids.to_file(output_file, driver="GeoJSON")
+        print(f"[{area_name}] Saved grid data to: {output_file}")
 
 
 if __name__ == "__main__":

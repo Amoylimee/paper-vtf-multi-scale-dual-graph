@@ -14,6 +14,7 @@ import iogenius as iog
 import pandas as pd
 import numpy as np
 from helpers import set_working_directory
+from config import AREAS, CONTEXT_EXTENT, COLUMN_NAMES, MAX_WORKERS
 
 
 def subsample_by_timegap(
@@ -56,7 +57,13 @@ def subsample_by_timegap(
     return sampled.reset_index(drop=True)
 
 
-def main(file_in: Path, output_dir: Path, log_dir: Path) -> None:
+def main(
+    file_in: Path,
+    log_dir: Path,
+    context_extent: list,
+    area_configs: dict,
+    **kwargs,
+) -> None:
     """Process a single AIS data file.
 
     Args:
@@ -70,29 +77,25 @@ def main(file_in: Path, output_dir: Path, log_dir: Path) -> None:
 
     with sb.PrintRedirector(log_dir / f"{file_in.stem}.log"):
         print(f"Processing {file_in}")
-        df = pd.read_feather(file_in, columns = ["AIS_new", "UTC", "lon", "lat", "speed"])
+        df = pd.read_feather(
+            file_in, columns=[COLUMN_NAMES["id"], COLUMN_NAMES["time"], COLUMN_NAMES["lon"], COLUMN_NAMES["lat"], "speed"]
+        )
         print("Input data shape:", df.shape)
 
-        # Study area extent: Zhoushan and Shanghai ports
-        main_extent = [
-            121.30,
-            123.65,  # lon_min, lon_max
-            29.50,
-            31.50,  # lat_min, lat_max
-        ]
-
-        # Filter data within study extent
-        df = df[
-            (df["lon"] >= main_extent[0])
-            & (df["lon"] <= main_extent[1])
-            & (df["lat"] >= main_extent[2])
-            & (df["lat"] <= main_extent[3])
-        ]
-        print("After extent filter shape:", df.shape)
+        # coarse filter by context extent to cut volume once
+        if context_extent:
+            lon_min, lon_max, lat_min, lat_max = context_extent
+            df = df[
+                (df[COLUMN_NAMES["lon"]] >= lon_min)
+                & (df[COLUMN_NAMES["lon"]] <= lon_max)
+                & (df[COLUMN_NAMES["lat"]] >= lat_min)
+                & (df[COLUMN_NAMES["lat"]] <= lat_max)
+            ]
+            print("After context extent filter shape:", df.shape)
 
         # Keep only December 2021 data
-        df["UTC"] = pd.to_datetime(df["UTC"])
-        df = df[df["UTC"].dt.month == 12]
+        df[COLUMN_NAMES["time"]] = pd.to_datetime(df[COLUMN_NAMES["time"]])
+        df = df[df[COLUMN_NAMES["time"]].dt.month == 12]
         print("After date filter shape:", df.shape)
 
         # ===== No need to subsample for now ===== #
@@ -102,10 +105,25 @@ def main(file_in: Path, output_dir: Path, log_dir: Path) -> None:
         # )
         # print("After sparsify shape:", df.shape)
 
-        if not df.empty:
-            output_file = output_dir / f"{file_in.stem}.feather"
-            df.reset_index(drop=True).to_feather(output_file)
-            print(f"Saved processed data to {output_file}")
+        # per-area filtering (only areas flagged for tracks)
+        for area_name, cfg in area_configs.items():
+            if not cfg.get("use_tracks", False):
+                continue
+            lon_min, lon_max, lat_min, lat_max = cfg["extent"]
+            area_df = df[
+                (df[COLUMN_NAMES["lon"]] >= lon_min)
+                & (df[COLUMN_NAMES["lon"]] <= lon_max)
+                & (df[COLUMN_NAMES["lat"]] >= lat_min)
+                & (df[COLUMN_NAMES["lat"]] <= lat_max)
+            ]
+            print(f"[{area_name}] after area filter shape: {area_df.shape}")
+
+            if not area_df.empty:
+                output_dir = Path(cfg["p1_output"])
+                output_dir.mkdir(parents=True, exist_ok=True)
+                output_file = output_dir / f"{file_in.stem}.feather"
+                area_df.reset_index(drop=True).to_feather(output_file)
+                print(f"[{area_name}] Saved processed data to {output_file}")
 
 
 if __name__ == "__main__":
@@ -117,10 +135,12 @@ if __name__ == "__main__":
     set_working_directory()
 
     # Create output directories
-    output_dir = Path("./output/p1_data")
     log_dir = Path("./logs/p1_get_data")
-    iog.create_new_directory(output_dir)
     iog.create_new_directory(log_dir)
+    # ensure area output dirs exist
+    for cfg in AREAS.values():
+        if cfg.get("use_tracks") and "p1_output" in cfg:
+            iog.create_new_directory(cfg["p1_output"])
 
     # Get input files
     input_path = Path("/disk/r102/jchenhl/Global_AIS_2021/P1_ReadData/output_P4")
@@ -130,8 +150,9 @@ if __name__ == "__main__":
     sb.process_files_parallel(
         main,
         input_files=input_files,
-        output_dir=output_dir,
         log_dir=log_dir,
-        max_workers=24,
+        context_extent=CONTEXT_EXTENT,
+        area_configs=AREAS,
+        max_workers=MAX_WORKERS,
         show_progress=True,
     )
