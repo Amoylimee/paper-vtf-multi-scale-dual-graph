@@ -268,21 +268,38 @@ if not mapbox_token:
 mapbox = MapboxTiles(mapbox_token, "light-v10")
 
 # =========================================================
-# COMBINED FIGURE: 3 side-by-side panels (same width/height)
-# Layout: [regional context] | [Zhoushan] | [Shanghai]
-# Adjust figsize or PANEL_VIEWPORTS above to fine-tune framing.
+# COMBINED FIGURE: 3 side-by-side panels (explicit fixed boxes)
+# Layout: [regional context] | [Zhoushan] | [Shanghai] | [colorbar]
 # =========================================================
 fig = plt.figure(figsize=(20, 7), dpi=300)
-from matplotlib.gridspec import GridSpec
-gs = GridSpec(
-    1, 4, figure=fig,
-    width_ratios=[1, 1, 1, 0.05],
-    left=0.05, right=0.98, top=0.985, bottom=0.1, wspace=0.18
-)
 
-ax0 = fig.add_subplot(gs[0, 0], projection=mapbox.crs)
-ax1 = fig.add_subplot(gs[0, 1], projection=mapbox.crs)
-ax2 = fig.add_subplot(gs[0, 2], projection=mapbox.crs)
+# Manual layout to guarantee identical panel sizes
+left_margin = 0.035
+right_margin = 0.97
+bottom_margin = 0.12
+top_margin = 0.98
+panel_gap = 0.03
+colorbar_gap = 0.02
+colorbar_width = 0.015
+
+available_width = right_margin - left_margin - 2 * panel_gap - colorbar_gap - colorbar_width
+panel_width = available_width / 3.0
+panel_height = top_margin - bottom_margin
+
+panel_positions = [
+    [left_margin + i * (panel_width + panel_gap), bottom_margin, panel_width, panel_height]
+    for i in range(3)
+]
+cbar_position = [
+    panel_positions[-1][0] + panel_width + colorbar_gap,
+    bottom_margin,
+    colorbar_width,
+    panel_height,
+]
+
+ax0 = fig.add_axes(panel_positions[0], projection=mapbox.crs)
+ax1 = fig.add_axes(panel_positions[1], projection=mapbox.crs)
+ax2 = fig.add_axes(panel_positions[2], projection=mapbox.crs)
 
 # =========================================================
 # PANEL (a): REGIONAL CONTEXT MAP
@@ -324,13 +341,13 @@ ax0.plot(
 
 # labels (same font/weight; neutral color)
 ax0.text(
-    zh_center_lon + 0.12, zh_center_lat + 0.10,
+    zh_center_lon - 0.80, zh_center_lat - 0.40,
     "Zhoushan Port",
     transform=proj, fontsize=11, color="black",
     ha="left", va="bottom", fontweight="bold", zorder=11
 )
 ax0.text(
-    sh_center_lon + 0.12, sh_center_lat + 0.10,
+    sh_center_lon + 0.12, sh_center_lat - 0.30,
     "Shanghai Port",
     transform=proj, fontsize=11, color="black",
     ha="left", va="bottom", fontweight="bold", zorder=11
@@ -346,8 +363,8 @@ gl0.xlabel_style = {"size": 9}
 gl0.ylabel_style = {"size": 9}
 
 # scalebar + north arrow (bigger bar for regional map)
-add_scalebar(ax0, length_km=PANEL_VIEWPORTS["a"]["scalebar_km"], location=(0.06, 0.06))
-add_north_arrow(ax0, x=0.95, y=0.12)
+add_scalebar(ax0, length_km=PANEL_VIEWPORTS["a"]["scalebar_km"], location=(0.7, 0.06))
+add_north_arrow(ax0, x=0.95, y=0.92)
 
 # =========================================================
 grid_patches, grid_values = load_grid_patches(GRID_PATH)
@@ -427,22 +444,23 @@ for panel in side_panels:
     
 # shared colorbar in dedicated axis for perfect panel alignment
 if len(collections) > 0:
-    cax = fig.add_subplot(gs[0, 3])
+    cax = fig.add_axes(cbar_position)
     cbar = plt.colorbar(collections[-1], cax=cax, orientation="vertical", extend="max")
     cbar.set_label("Low \u2190     Traffic Density     \u2192 High", fontsize=14, fontweight="bold")
     cbar.set_ticks([])
     cbar.ax.tick_params(length=0)
-    cbar.outline.set_visible(False)
+    cbar.outline.set_visible(True)
     cbar.solids.set_edgecolor("face")
     cbar.solids.set_linewidth(0)
-    # nudge colorbar a bit left
-    box = cax.get_position()
-    cax.set_position([box.x0 - 0.01, box.y0, box.width, box.height])
 
-# panel labels along the bottom of each subplot
-label_y = -0.06
-for axis, lbl in [(ax0, "a"), (ax1, "b"), (ax2, "c")]:
-    add_panel_label(axis, lbl, y=label_y, fontsize=18)
+
+# panel labels along a shared baseline (figure coords)
+panel_axes = [ax0, ax1, ax2]
+label_y_fig = bottom_margin - 0.04
+for axis, lbl in zip(panel_axes, ["a", "b", "c"]):
+    pos = axis.get_position()
+    cx = pos.x0 + pos.width / 2
+    fig.text(cx, label_y_fig, f"({lbl})", ha="center", va="top", fontsize=18, fontweight="bold")
 
 plt.show()
 
