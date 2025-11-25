@@ -13,11 +13,18 @@ mkdir -p output/p3_plot
 # 定义要测试的分位数组合 (vmin, vmax)
 # 格式: "vmin vmax 描述"
 test_cases=(
+    "0 85 VeryConservative-85th"
     "0 90 Conservative-90th"
+    "0 92 Standard-92nd"
     "0 95 Standard-95th"
-    "0 99 Aggressive-99th"
+    "0 97 Aggressive-97th"
+    "0 99 VeryAggressive-99th"
+    "5 90 Trimmed-5to90"
     "5 95 Trimmed-5to95"
+    "5 99 Trimmed-5to99"
+    "10 90 Trimmed-10to90"
     "10 95 Trimmed-10to95"
+    "10 99 Trimmed-10to99"
 )
 
 echo "Will test ${#test_cases[@]} configurations:"
