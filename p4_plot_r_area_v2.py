@@ -363,7 +363,7 @@ gl0.xlabel_style = {"size": 9}
 gl0.ylabel_style = {"size": 9}
 
 # scalebar + north arrow (bigger bar for regional map)
-add_scalebar(ax0, length_km=PANEL_VIEWPORTS["a"]["scalebar_km"], location=(0.7, 0.06))
+add_scalebar(ax0, length_km=PANEL_VIEWPORTS["a"]["scalebar_km"], location=(0.7, 0.07))
 add_north_arrow(ax0, x=0.95, y=0.92)
 
 # =========================================================
@@ -383,8 +383,8 @@ else:
 collections = []
 
 side_panels = [
-    {"ax": ax1, "poly": zhoushan_poly, "color": "crimson", "label": "Zhoushan", "key": "b"},
-    {"ax": ax2, "poly": shanghai_poly, "color": "navy", "label": "Shanghai", "key": "c"},
+    {"ax": ax1, "poly": zhoushan_poly, "color": "crimson", "label": f"Study Area 1\nZhoushan", "key": "b"},
+    {"ax": ax2, "poly": shanghai_poly, "color": "navy", "label": f"Study Area 2\nShanghai", "key": "c"},
 ]
 
 for panel in side_panels:
@@ -440,7 +440,7 @@ for panel in side_panels:
     gl.ylabel_style = {"size": 9}
 
     add_scalebar(ax, length_km=PANEL_VIEWPORTS[key]["scalebar_km"], location=(0.70, 0.07))
-    add_north_arrow(ax, x=0.95, y=0.12)
+    add_north_arrow(ax, x=0.95, y=0.92)
     
 # shared colorbar in dedicated axis for perfect panel alignment
 if len(collections) > 0:
