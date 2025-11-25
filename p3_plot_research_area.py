@@ -567,5 +567,7 @@ def add_north_arrow_large(ax, x=0.88, y=0.15):
 
 add_north_arrow_large(inset_ax, x=0.88, y=0.8)  # 增大 y 值向上移动
 
-# plt.show()
-plt.savefig(f'./output/p3_plot/study_area_map_{VMIN_PERCENTILE}_{VMAX_PERCENTILE}.png', bbox_inches='tight')
+# make sure otuput directory exists
+output_dir = './output/p3_plot'
+os.makedirs(output_dir, exist_ok=True)
+plt.savefig(f'{output_dir}/study_area_map_{VMIN_PERCENTILE}_{VMAX_PERCENTILE}.png', bbox_inches='tight')
